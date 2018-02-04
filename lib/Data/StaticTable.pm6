@@ -416,12 +416,11 @@ B<not for serialization>.
 
 =head2 C<method keys>
 
-Shows the name of the columns indexed.
+Returns the name of the columns indexed.
 
 =head2 C<method values>
 
-Shows a summary of the data contained in the Query object. Used for debugging,
-B<not for serialization>.
+Returns the values indexed.
 
 =head2 C<method kv>
 

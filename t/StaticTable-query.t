@@ -39,6 +39,11 @@ ok($q2.grep("Dim2", all(rx/1/, rx/5/))     ~~ (2,),      "Grep test returns row 
 ok($q2.grep("Dim2", none(rx/1/, rx/5/))    ~~ (3, 5),    "Grep test returns rows 3,5");
 ok($q2.grep("Dim1", any(rx/ALPHA/, rx/0/)) ~~ (4, 5, 6), "Grep test returns rows 4,5,6");
 
+diag "······································································";
+my Data::StaticTable::Position @rowlist = (1,2,3);
+my $tX = $t1.take( @rowlist );
+diag $tX.display;
+
 ok(
     $q1.grep("Dim2", any(rx/1/, rx/5/)) ~~ $q2.grep("Dim2", any(rx/1/, rx/5/)),
     "Grep with index and without are equivalent (#1)"
