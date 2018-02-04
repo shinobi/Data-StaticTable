@@ -56,3 +56,5 @@ my Data::StaticTable::Position @r2 = $q3.grep('C', rx/y/); # Rows 3 and 5
 
 my $t4 = $t3.take(@r2); # Table $t4 is $t3 with rows 3 and 5 only
 say $t4.display;  # Display contents of $t4
+
+done-testing;
