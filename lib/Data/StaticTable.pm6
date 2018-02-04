@@ -306,9 +306,13 @@ will be used.
 You can get data by rows, columns, and create subsets by taking some
 rows from an existing StaticTable.
 
-=head1 C<Data::StaticTable::Position>
+=back
 
-Basically, an integer greater or equal to 0. Used to indicate a row position
+=head1 Types
+
+=head2 C<Data::StaticTable::Position>
+
+Basically, an integer greater than 0. Used to indicate a row position
 in the table. A StaticTable do not have rows on index 0.
 
 =head1 C<Data::StaticTable> class
