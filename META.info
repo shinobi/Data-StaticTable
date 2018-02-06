@@ -1,0 +1,13 @@
+{
+	"name" : "Data::StaticTable",
+	"version" : "0.1.0",
+	"description" : "Bidimensional table, cells are refered to by rows and column names. Basic search features",
+	"author" : "github:shinobi",
+	"depends" : [],
+	"provides" : {
+	        "Data::StaticTable" : "lib/StaticTable.pm6",
+	        "Data::StaticTable::Query" : "lib/StaticTable.pm6"
+          "X::Data::StaticTable" : "lib/X/Data/StaticTable.pm6"
+	},
+	"source-url" : "git://github.com/shinobi/Date-StaticTable.git"
+}

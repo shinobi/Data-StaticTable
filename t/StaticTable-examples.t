@@ -21,6 +21,7 @@ say $t1.columns;             # Prints 3
 say $t1.header;              # Prints [Col1 Col2 Col3]
 #say $t1[0]<Col2>;            # This will fail, There is NO ROW ZERO
 say $t1[1]<Col2>;            # Prints 2
+<<<<<<< HEAD
 say $t1.cell("Col1", 1); # Prints 1
 
 say $t1.cell("Col1", 4).defined; # Prints False
@@ -29,6 +30,16 @@ say $t1.cell("Col3", 4).defined; # Prints True
 
 say $t1[1];         # Prints {Col1 => 1, Col2 => 2, Col3 => 3}
 say $t1.row(1); # Prints (1 2 3)
+=======
+say $t1.get-cell("Col1", 1); # Prints 1
+
+say $t1.get-cell("Col1", 4).defined; # Prints False
+say $t1.get-cell("Col2", 4).defined; # Prints False
+say $t1.get-cell("Col3", 4).defined; # Prints True
+
+say $t1[1];         # Prints {Col1 => 1, Col2 => 2, Col3 => 3}
+say $t1.get-row(1); # Prints (1 2 3)
+>>>>>>> ff87055983da972e08c23fd85abc137bd96ef34f
 
 my Data::StaticTable::Position @rowlist = (1,3);
 my $t2 = $t1.take( @rowlist ); # $t2 is $t1 but only containing rows 1 and 3

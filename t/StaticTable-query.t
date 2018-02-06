@@ -21,6 +21,7 @@ diag $t1.display;
 diag "== Check indexes ==";
 my $q1  = Data::StaticTable::Query.new($t1);
 for ($t1.header) -> $h { $q1.add-index($h) }; #--- Generate all indexes
+
 ok($q1<Dim4>.elems == 4, "Index of Dim4 has 4 elements");
 ok($q1<Dim1>:exists == True, "We can check if a column index has been generated");
 ok($q1<DimX>:exists == False, "We can check if a column index has not been generated");

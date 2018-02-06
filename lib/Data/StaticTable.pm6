@@ -128,6 +128,7 @@ class StaticTable {
         }
         return @shaped;
     }
+
     #==== Positional =====
     multi method elems(::?CLASS:D:) {
         return @!data.elems;
@@ -216,7 +217,7 @@ class StaticTable {
 #------------------------------------------------------------------------------#
 
 class StaticTable::Query {
-    has %!indexes;
+    has %!indexes handles <keys elems values kv AT-KEY EXISTS-KEY>;
     #-- Cache
     has %!stored-rownumbers;
     has Data::StaticTable $!T;
@@ -235,13 +236,6 @@ class StaticTable::Query {
         }
         return $out;
     }
-
-    method keys { return %!indexes.keys }
-    method elems { return %!indexes.keys.elems }
-    method values { return return %!indexes.values }
-    method kv { return return %!indexes.kv }
-    method AT-KEY(::?CLASS:D: Str $heading) { return %!indexes{$heading} }
-    method EXISTS-KEY(::?CLASS:D: Str $heading) { return %!indexes{$heading}:exists }
 
     method grep(Str $heading, Mu $matcher where { -> Regex {}($_); True }) {
         my Data::StaticTable::Position @rownums;
