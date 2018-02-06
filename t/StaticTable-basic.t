@@ -26,8 +26,8 @@ my $t1 = Data::StaticTable.new(
 );
 diag $t1.display;
 ok($t1.header ~~ <A B C D E F G H I J>, "Column names are automatically filled");
-ok($t1.column{'A'} == 1, "Column 1 is automatically labeled 'A'");
-ok($t1.column{'E'} == 5, "Column 5 is automatically labeled 'E'");
+ok($t1.ci{'A'} == 1, "Column 1 is automatically labeled 'A'");
+ok($t1.ci{'E'} == 5, "Column 5 is automatically labeled 'E'");
 ok($t1.rows == 1, "StaticTable has one row only");
 ok($t1.elems == 10, "StaticTable contains 10 elements");
 #===============================================================================
@@ -39,7 +39,7 @@ my $t2 = Data::StaticTable.new(
 diag $t2.display;
 ok($t2.columns == 10, "Data::StaticTable t2 has 10 columns");
 ok($t2.rows == 2, "Data::StaticTable t2 has 2 rows");
-ok($t2.get-cell('C', 2) ~~ Any, "Filler cell in 'C',2 is Any element");
+ok($t2.cell('C', 2) ~~ Any, "Filler cell in 'C',2 is Any element");
 ok($t2.elems == 20, "StaticTable contains 20 elements (11 + extra 9)");
 
 #===============================================================================
@@ -53,15 +53,15 @@ my $t3 = Data::StaticTable.new(
     )
 );
 diag $t3.display;
-ok($t3.get-cell('Col3',1) == 3, "Reading a cell directly");
-ok($t3.get-cell('Col1',3).defined == False, "Asking for undefined cell assigned Any");
-ok($t3.get-cell('Col2',3).defined == False, "Asking for undefined cell assigned Nil");
-ok($t3.get-cell('Col3',3).defined == True, "Asking for defined cell");
+ok($t3.cell('Col3',1) == 3, "Reading a cell directly");
+ok($t3.cell('Col1',3).defined == False, "Asking for undefined cell assigned Any");
+ok($t3.cell('Col2',3).defined == False, "Asking for undefined cell assigned Nil");
+ok($t3.cell('Col3',3).defined == True, "Asking for defined cell");
 dies-ok
-{ $t3.get-cell('Col999', 2) },
+{ $t3.cell('Col999', 2) },
 "Can not access with an inexistant column";
 dies-ok
-{ $t3.get-cell('Col1', 4) },
+{ $t3.cell('Col1', 4) },
 "Can not access with an inexistant row";
 
 
@@ -97,13 +97,13 @@ my $t4 = Data::StaticTable.new(
 diag $t4.display;
 ok($t4.header ~~ <A B C>, "StaticTable has the correct header");
 ok($t4.columns == 3, "StaticTable has 3 columns");
-ok($t4.column{'B'} == 2, "StaticTable second column has the header name 'B'");
-ok($t4.column{'Z'} ~~ Any, "StaticTable has no column with the header name 'Z'");
+ok($t4.ci{'B'} == 2, "StaticTable second column has the header name 'B'");
+ok($t4.ci{'Z'} ~~ Any, "StaticTable has no column with the header name 'Z'");
 ok($t4.rows == 22, "StaticTable has 22 rows");
-ok($t4.get-column("A") ~~ (1, 4 ... 64).list, "Column has the correct data in the 'A' column");
-ok($t4.get-cell('C', 1) == 3, "Correct value found in t3 at 'C',1");
-ok(35 eq $t4.get-cell('B', 12), "Correct value found at 'B',12");
-ok((4,5,6) ~~ $t4.get-row(2) , "Correct row number 2 found");
+ok($t4.column("A") ~~ (1, 4 ... 64).list, "Column has the correct data in the 'A' column");
+ok($t4.cell('C', 1) == 3, "Correct value found in t3 at 'C',1");
+ok(35 eq $t4.cell('B', 12), "Correct value found at 'B',12");
+ok((4,5,6) ~~ $t4.row(2) , "Correct row number 2 found");
 ok($t4.header.elems == 3, "Header has 3 elements");
 
 
@@ -128,7 +128,7 @@ my $t5-colorwhiteonly = $t5.take(%t5-iColor{'white'});
 diag "== Resulting StaticTable with only Color='white' ==";
 diag $t5-colorwhiteonly.display;
 ok($t5-colorwhiteonly.rows == 2, "Resulting table has 2 rows");
-ok($t5-colorwhiteonly.get-cell('Type', 2) eq 'Boat', "Resulting table has a Boat in the 2nd row");
+ok($t5-colorwhiteonly.cell('Type', 2) eq 'Boat', "Resulting table has a Boat in the 2nd row");
 #-- Trying to generate an empty table from a list of row numbers
 
 my Data::StaticTable::Position @empty-rownum-list = ();
@@ -164,16 +164,16 @@ ok($t10.rows == 6, "StaticTable has 6 rows");
 
 my %t10-row1 = (:Attr("attribute-1"), :Dim1(1), :Dim2(2), :Dim3(3), :Dim4("D+"));
 my %t10-row4 = (:Attr("attribute-4"), :Dim1($("ALPHA", "BETA", 3.0)), :Dim2(5), :Dim3(6), :Dim4("A++"));
-#-- By using  [] you can actually call get-row
-#Get the col pos of each attr key using [], compare to get-row
-#ok($t10[1] ~~ $t10.get-row(1), "[] and .get-row are equivalent");
+#-- By using  [] you can actually call row
+#Get the col pos of each attr key using [], compare to row
+#ok($t10[1] ~~ $t10.row(1), "[] and .row are equivalent");
 
 ok($t10[1] ~~ %t10-row1, "Reading rows by number returns the right hash for the row - row number 1");
 ok($t10[4] ~~ %t10-row4, "Reading rows by number returns the right hash for the row - row number 4, complex");
 ok($t10[4]<Dim1>[0] eq 'ALPHA', "Can read complex data inside a cell  - row number 4");
-ok($t10.get-cell("Dim1", 6) ~~ (-2 .. 2), "Can read complex data inside a cell - row number 6");
-ok($t10.get-cell("Dim1", 6) ~~ (-2 .. 2), "Can read complex data inside a cell - row number 6");
-ok($t10[1]<Dim1> ~~ $t10.get-cell("Dim1", 1), "Equivalent ways to read the same cell");
+ok($t10.cell("Dim1", 6) ~~ (-2 .. 2), "Can read complex data inside a cell - row number 6");
+ok($t10.cell("Dim1", 6) ~~ (-2 .. 2), "Can read complex data inside a cell - row number 6");
+ok($t10[1]<Dim1> ~~ $t10.cell("Dim1", 1), "Equivalent ways to read the same cell");
 
 diag "== Resulting StaticTable with only Dim2=5 ==";
 my %t10-iDim2 = $t10.generate-index("Dim2");
@@ -184,7 +184,7 @@ diag $t10-Dim2is5.display;
 ok($t10-Dim2is5.rows == 2, "Resulting table has 2 rows too");
 ok($t10-Dim2is5[2]<Dim1>[1] eq 'BETA', "Can read complex data inside a cell  - row number 2 of resulting table");
 
-my @shape = $t10.get-shaped-array();
+my @shape = $t10.shaped-array();
 ok (@shape[3;1;0] eq 'ALPHA', "Shape spec works as expected (3 dimensions)");
 ok (@shape[3;1;1] eq 'BETA', "Shape spec works as expected (3 dimensions)");
 ok (@shape[3;1;2] == 3, "Shape spec works as expected (3 dimensions)");

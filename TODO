@@ -1,0 +1,3 @@
+<gfldex> shinobi-cl: you may want to add a multi candidate with WhateverCode where the user can supply an index.
+* Zoffix (WeeChat@perl6/zoffix) ha entrado en #perl6
+<gfldex> shinobi-cl: You may also want to look into `handles`, see: https://docs.perl6.org/language/typesystem#trait_handles

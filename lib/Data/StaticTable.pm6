@@ -12,11 +12,11 @@ class StaticTable {
     has Position $.rows;
     has @!data;
     has Str @.header;
-    has %.column;
+    has %.ci; #-- Gets the heading (Str) for a column number (Position)
 
     method perl {
         my Str $out = "Columns:$!columns Rows:$!rows Elems:" ~ @!data.elems;
-        my @headers = gather for %!column.sort(*.value)>>.kv -> ($k, $v) { take "$v=$k"; }
+        my @headers = gather for %!ci.sort(*.value)>>.kv -> ($k, $v) { take "$v=$k"; }
         $out ~= " Headings:" ~ @headers ;
         return $out;
     }
@@ -26,7 +26,7 @@ class StaticTable {
         for (1 .. $!rows) -> $row-num {
             $out ~= "\n";
             for (1 .. $!columns) -> $col-num {
-                my $cell = self!get-cell-by-position($col-num, $row-num).perl;
+                my $cell = self!cell-by-position($col-num, $row-num).perl;
                 $out ~= "[" ~ $cell ~ "]\t";
             }
         }
@@ -40,7 +40,7 @@ class StaticTable {
     }
 
     submethod BUILD (
-    :@!data, :@!header, :%!column, Position :$!columns, Position :$!rows
+    :@!data, :@!header, :%!ci, Position :$!columns, Position :$!rows
     ) { }
     method !calculate-dimensions(Position $columns, Int $elems) {
         my $extra-cells = $elems % $columns;
@@ -71,7 +71,7 @@ class StaticTable {
             rows    => $rows,
             data    => @new-data,
             header  => @header.map(*.Str),
-            column  => %column-index
+            ci      => %column-index
         );
     }
     multi method new(Position $columns!, +@new-data) {
@@ -80,50 +80,50 @@ class StaticTable {
     }
 
     #-- Accessing cells directly
-    method !get-cell-by-position(Position $col!, Position $row!) {
+    method !cell-by-position(Position $col!, Position $row!) {
         my $pos = ($!columns * ($row-1)) + $col - 1;
         if ($pos < @!data.elems) { return @!data[$pos]; }
         X::Data::StaticTable.new("Out of bounds").throw;
     }
-    method get-cell(Str $column-header, Position $row) {
-        my Position $column-number = self!get-column-number($column-header);
-        return self!get-cell-by-position($column-number, $row);
+    method cell(Str $column-header, Position $row) {
+        my Position $column-number = self!column-number($column-header);
+        return self!cell-by-position($column-number, $row);
     }
 
     #-- Retrieving a column by its name
-    method !get-column-number(Str $heading) {
-        if (%!column{$heading}:exists) { return %!column{$heading}; }
+    method !column-number(Str $heading) {
+        if (%!ci{$heading}:exists) { return %!ci{$heading}; }
         X::Data::StaticTable.new("Heading $heading not found").throw;
     }
 
-    method get-column(Str $heading) {
-        my Position $column-number = self!get-column-number($heading);
+    method column(Str $heading) {
+        my Position $column-number = self!column-number($heading);
         my Int $pos = $column-number - 1;
         return @!data[$pos+($!columns*0), $pos+($!columns*1) ... *];
     }
 
     #-- Retrieving specific rows
-    method get-row(Position $row) {
+    method row(Position $row) {
         if (($row < 1) || ($row > $.rows)) {
             X::Data::StaticTable.new("Out of bounds").throw;
         }
         return @!data[($row-1) * $!columns ... $row * $!columns - 1];
     }
-    method !get-rows(@rownums) {
-        my @result = gather for (@rownums) -> $num { take self.get-row($num) };
+    method !rows(@rownums) {
+        my @result = gather for (@rownums) -> $num { take self.row($num) };
         return @result;
     }
 
     #-- Shaped arrays
     #-- Perl6 shaped arrays:  @a[3;2] <= 3 rows and 2 columns, starts from 0
     #-- This method returns the data only (not headers)
-    method get-shaped-array() {
+    method shaped-array() {
         my @shaped;
-        my @rows = self!get-rows(1 .. $.rows);
+        my @rows = self!rows(1 .. $.rows);
         for (1 .. $.rows) -> $r {
             my @row = @rows[$r];
             for (1 .. $.columns) -> $c {
-                @shaped[$r - 1;$c - 1] = self!get-cell-by-position($c, $r);
+                @shaped[$r - 1;$c - 1] = self!cell-by-position($c, $r);
             }
         }
         return @shaped;
@@ -135,7 +135,7 @@ class StaticTable {
 
     method AT-POS(::?CLASS:D: Position $row) {
         return @.header.list if ($row == 0);
-        my @row = self.get-row($row);
+        my @row = self.row($row);
         my %full-row;
         for (0 .. $.columns - 1) -> $i {
             %full-row{@.header[$i]} = @row[$i];
@@ -147,7 +147,7 @@ class StaticTable {
     method generate-index(Str $heading) {
         my %index;
         my Position $row-num = 1;
-        my @full-column = self.get-column($heading);
+        my @full-column = self.column($heading);
         for (@full-column) -> $item {
             if ($item.defined) {
                 if (%index{$item}:exists == False) {
@@ -176,7 +176,7 @@ class StaticTable {
         }
         my @result = ();
         if (@rownums.elems == 1) {
-            @result = self.get-row(@rownums[0])
+            @result = self.row(@rownums[0])
         } else {
             #--- Instead of getting row by row, we
             #--- get whole blocks of continous rows.
@@ -251,7 +251,7 @@ class StaticTable::Query {
                 @rownums.push(|%!indexes{$heading}{$k});
             }
         } else {;
-            @rownums = 1 <<+>> ( grep {.defined and $matcher}, :k, $!T.get-column($heading) );
+            @rownums = 1 <<+>> ( grep {.defined and $matcher}, :k, $!T.column($heading) );
         }
         return @rownums.sort.list;
     }
@@ -264,7 +264,7 @@ class StaticTable::Query {
     method add-index(Str $heading) {
         my %index;
         my Data::StaticTable::Position $row-num = 1;
-        my @full-column = $!T.get-column($heading);
+        my @full-column = $!T.column($heading);
         for (@full-column) -> $item {
             if ($item.defined) {
                 if (%index{$item}:exists == False) {
@@ -359,19 +359,19 @@ B<not for serialization>.
 Shows the contents of the StaticTable Used for debugging, B<not for
 serialization>.
 
-=head2 C<method get-cell(Str $column-header, Position $row)>
+=head2 C<method cell(Str $column-header, Position $row)>
 
 Retrieves the content of a cell.
 
-=head2 C<method get-column(Str $column-header)>
+=head2 C<method column(Str $column-header)>
 
 Retrieves the content of a column like a regular C<List>.
 
-=head2 C<method get-row(Position $row)>
+=head2 C<method row(Position $row)>
 
 Retrieves the content of a row as a regular C<List>.
 
-=head2 C<method get-shaped-array()>
+=head2 C<method shaped-array()>
 
 Retrieves the content of a row as a multiple dimension array.
 
