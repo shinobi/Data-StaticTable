@@ -1,10 +1,10 @@
 {
   "name": "Data::StaticTable",
-  "source-url": "git://github.com/shinobi/Data-StaticTable.git",
+  "source-url": "https://github.com/shinobi/Data-StaticTable.git",
   "perl": "6.*",
   "author": "github:shinobi",
   "depends": [
-    
+
   ],
   "license": "Artistic-2.0",
   "provides": {
