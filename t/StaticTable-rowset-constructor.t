@@ -49,7 +49,7 @@ diag "== Hash to StaticTable ==";
 my $t3 = Data::StaticTable.new(@data-hash-list):set-of-hashes;
 diag $t3.display;
 ok($t3.rows == 4, "Contains 4 rows");
-ok($t3.columns == 9, "Contains 8 colums");
+ok($t3.columns == 9, "Contains 9 colums");
 ok($t3[3]<airbags> == 8, "3rd car has 8 airbags");
 ok($t3[1]<airbags>.defined == False, "1st car does not have airbags defined");
 ok($t3[4]<battery-kWh> == 75, "4th car has a 75kWh battery");
@@ -57,7 +57,7 @@ ok($t3[4]<battery-kWh> == 75, "4th car has a 75kWh battery");
 throws-like
 { my $ = Data::StaticTable.new(@data-array-list):set-of-hashes},
 X::Data::StaticTable,
-"Trying to create a StaticTable from hashes without any hash, fails";
+"Trying to create a StaticTable from hashes without providing any hash, fails";
 
 
 
