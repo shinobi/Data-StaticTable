@@ -406,6 +406,43 @@ columns.
 If you do not provide enough data to fill the last row, empty cels will be
 appended.
 
+You can also create a StaticTable from an array, with each element representing
+a row. The StaticTable will acommodate the values as best as possible, adding
+empty values or discarding values that go beyond the boundaries, or data
+that is not prepared appropiately
+
+This constructor can be called like this
+
+ my $t = StaticTable.new(
+    (1,2,3),
+    (4,5,6),
+    (7,8,9)
+ )
+
+ There is a set of named parameters usable in this constructor
+
+ my $t = StaticTable.new(@ArrayOfArrays):data-has-header
+
+This will use the first row as header. Any value that falls outside the column
+boudaries will be discarded.
+
+ my $t = StaticTable.new(@ArrayOfHashes):set-of-hashes
+
+This will consider each row as a hash, and will create columns for each key
+found. The most populated will be at the first columns. Any row that is not a
+hash will be discarded
+
+ my $t = StaticTable.new(
+   @ArrayOfArrays, rejected-data => %rejected
+ ):data-has-header
+
+ my $t = StaticTable.new(
+   @ArrayOfHashes, rejected-data => @rejected
+ ):set-of-hashes
+
+In these cases, you can recover all the data that was discarded
+
+
 =head2 C<method perl>
 
 Shows a summary of the things contained in the Query object. Used for debugging,
