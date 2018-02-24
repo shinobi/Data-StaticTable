@@ -1,3 +1,10 @@
 <gfldex> shinobi-cl: you may want to add a multi candidate with WhateverCode where the user can supply an index.
 * Zoffix (WeeChat@perl6/zoffix) ha entrado en #perl6
 <gfldex> shinobi-cl: You may also want to look into `handles`, see: https://docs.perl6.org/language/typesystem#trait_handles
+
+
+gfldex> m: my @a = [[1,2,3],<a b c>]; say @a[{now.Date.day-of-week};1];
+<camelia> rakudo-moar a8e6be66a: OUTPUT: «(b)␤»
+* mcmillhj (~mcmillhj@216.30.182.202) ha entrado en #perl6
+<gfldex> shinobi-cl: ^^^ the x-cood depends on the day of week at runtime
+<Zoffix> AlexDaniel: ah, cause I'm talking shit.

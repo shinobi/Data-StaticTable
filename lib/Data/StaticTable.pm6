@@ -45,7 +45,7 @@ class StaticTable {
     method !calculate-dimensions(Position $columns, Int $elems) {
         my $extra-cells = $elems % $columns;
         $extra-cells = $columns - $extra-cells if ($extra-cells > 0);
-        my @additional-cells = Any xx $extra-cells; #'Any' objects to fill an incomplete row
+        my @additional-cells = Nil xx $extra-cells; #'Nil' objects to fill an incomplete row, will appear as 'Any'
         my Position $rows = ($elems + $extra-cells) div $columns;
         return $rows, |@additional-cells;
     }
@@ -75,8 +75,71 @@ class StaticTable {
         );
     }
     multi method new(Position $columns!, +@new-data) {
-        my @header = ('A', 'B' ... *)[0 ... $columns - 1];
-        self.new(@header.list, @new-data);
+        my @header = ('A', 'B' ... *)[0 ... $columns - 1].list;
+        self.new(@header, @new-data);
+    }
+
+    #== Rowset constructor: just receive an array and do our best to handle it ==
+    multi method new(@new-data,         #-- By default, @new-data is an array of arrays
+        Bool :$set-of-hashes = False,   #-- Receiving an array with hashes in each element
+        Bool :$data-has-header = False, #-- Asume an array of arrays. First row is the header
+        :$rejected-data is raw = Nil    #-- Rejected rows or cells will be returned here
+    ) {
+        if ($set-of-hashes && $data-has-header) {
+            X::Data::StaticTable.new("Contradictory flags using the 'rowset' constructor").throw;
+        }
+        my (@data, @xeno-hash, %xeno-array); #-- @xeno will be used ONLY if rejected-rows is provided
+        my @header;
+
+        #-----------------------------------------------------------------------
+        if ($set-of-hashes) { #--- HASH MODE -----------------------------------
+            # Pass 1: Weed out not-hashes and determine an optimal header
+            my %column-frequency;
+            my @hashable-data;
+            for (@new-data) -> $row-ref {
+                if ($row-ref ~~ Hash) { # Sort Columns so most common ones appear at first
+                    my %row = %$row-ref;
+                    for (%row.keys) { %column-frequency{$_}++ }
+                    push @hashable-data, $row-ref;
+                } else {
+                    push @xeno-hash, $row-ref if ($rejected-data.defined);
+                }
+            }
+            @header = %column-frequency.sort({ -.value, .key }).map: (*.keys[0]);
+            if (@hashable-data.elems == 0) {
+                X::Data::StaticTable.new("No data available").throw;
+            }
+            # Pass 2: Populate with data
+            for (@hashable-data) -> $hash-ref {
+                my %row = %$hash-ref;
+                for (@header) -> $heading {
+                    push @data, (%row{$heading}.defined) ?? %row{$heading} !! Nil;
+                }
+            }
+            @$rejected-data = @xeno-hash if ($rejected-data.defined);
+        } else { #--- ARRAY MODE -----------------------------------------------
+            my Data::StaticTable::Position $columns;
+            my $first-data-row = 0;
+            if ($data-has-header) {
+                @header = @new-data[0];
+                @header = @header>>[].flat; #-- Completely flatten the header
+                $columns = @header.elems;
+                $first-data-row = 1;
+            } else {
+                $columns = @new-data.max(*.elems).elems;
+                @header = ('A', 'B' ... *)[0 ... $columns - 1].list;
+            }
+            my $i = 1;
+            for (@new-data[$first-data-row ... *]) -> $row-ref {
+                my @row = @$row-ref;
+                %xeno-array{$i} = @row.splice($columns) if (@row.elems > $columns);
+                push @row, |(Nil xx $columns - @row.elems) if @row.elems < $columns;
+                push @data, |@row;
+                $i++;
+            }
+            %$rejected-data = %xeno-array if ($rejected-data.defined);
+        } #---------------------------------------------------------------------
+        return self.new(@header, @data);
     }
 
     #-- Accessing cells directly

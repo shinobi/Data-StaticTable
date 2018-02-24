@@ -130,7 +130,6 @@ diag $t5-colorwhiteonly.display;
 ok($t5-colorwhiteonly.rows == 2, "Resulting table has 2 rows");
 ok($t5-colorwhiteonly.cell('Type', 2) eq 'Boat', "Resulting table has a Boat in the 2nd row");
 #-- Trying to generate an empty table from a list of row numbers
-
 my Data::StaticTable::Position @empty-rownum-list = ();
 throws-like
 { my $ = $t5.take(@empty-rownum-list) },
@@ -189,5 +188,7 @@ ok (@shape[3;1;0] eq 'ALPHA', "Shape spec works as expected (3 dimensions)");
 ok (@shape[3;1;1] eq 'BETA', "Shape spec works as expected (3 dimensions)");
 ok (@shape[3;1;2] == 3, "Shape spec works as expected (3 dimensions)");
 ok (@shape[1;2] == 5, "Shape spec works as expected (2 dimensions)");
+
+
 
 done-testing;
