@@ -27,7 +27,7 @@ diag $t2.display;
 ok($t2.rows == 5, "Contains 5 rows");
 ok($t2.columns == 5, "Contains 5 colums");
 ok($t2[4]<E> == 5, "3rd row, column E has a 5");
-ok($t2[1]<E>.defined == False, "1st row does not have D defined");
+ok($t2[1]<E>.defined == False, "1st row does not have E defined");
 
 throws-like
 { my $ = Data::StaticTable.new(@data-array-list):set-of-hashes:data-has-header },
