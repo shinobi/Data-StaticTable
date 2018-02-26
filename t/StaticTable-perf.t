@@ -106,4 +106,16 @@ ok(
     "Grep with index and without are equivalent"
 );
 
+diag "== Cloning ==";
+$TIME = now;
+my $t2-clone = $t2.clone();
+$TIME = now - $TIME;
+diag "== Cloning a big StaticTable took : $TIME secs. ==";
+
+diag "== Comparison on a big StaticTable (might take a while...) ==";
+$TIME = now;
+$ = $t2 eqv $t2-clone;
+$TIME = now - $TIME;
+diag "== Comparing 2 big equal StaticTables took : $TIME secs. ==";
+
 done-testing;

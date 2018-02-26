@@ -6,19 +6,21 @@ unit module Data;
 subset StaticTable::Position of Int where * >= 1;
 
 
-
 class StaticTable {
     has Position $.columns;
     has Position $.rows;
     has @!data;
     has Str @.header;
     has %.ci; #-- Gets the heading (Str) for a column number (Position)
+    has $!filler;
 
     method perl {
-        my Str $out = "Columns:$!columns Rows:$!rows Elems:" ~ @!data.elems;
-        my @headers = gather for %!ci.sort(*.value)>>.kv -> ($k, $v) { take "$v=$k"; }
-        $out ~= " Headings:" ~ @headers ;
-        return $out;
+        my @all-cells;
+        for (1 .. $.rows) -> $i { push @all-cells, |self.row($i); }
+        return
+            'Data::StaticTable.new(' ~
+            @.header.perl ~ ', ' ~
+            @all-cells.perl ~ ')';
     }
 
     method display {
@@ -42,22 +44,22 @@ class StaticTable {
     submethod BUILD (
     :@!data, :@!header, :%!ci, Position :$!columns, Position :$!rows
     ) { }
-    method !calculate-dimensions(Position $columns, Int $elems) {
+    method !calculate-dimensions(Position $columns, Int $elems, $filler) {
         my $extra-cells = $elems % $columns;
         $extra-cells = $columns - $extra-cells if ($extra-cells > 0);
-        my @additional-cells = Nil xx $extra-cells; #'Nil' objects to fill an incomplete row, will appear as 'Any'
+        my @additional-cells = $filler xx $extra-cells; #'Nil' objects to fill an incomplete row, will appear as 'Any'
         my Position $rows = ($elems + $extra-cells) div $columns;
         return $rows, |@additional-cells;
     }
 
-    multi method new(@header!, +@new-data) { #-- It should be Str @header!
+    multi method new(@header!, +@new-data, :$filler = Nil) {
         if (@header.elems < 1) {
             X::Data::StaticTable.new("Header is empty").throw;
         }
         if (@new-data.elems < 1) {
             X::Data::StaticTable.new("No data available").throw;
         }
-        my ($rows, @additional-cells) = self!calculate-dimensions(@header.elems, @new-data.elems);
+        my ($rows, @additional-cells) = self!calculate-dimensions(@header.elems, @new-data.elems, $filler);
         my Int $col-num = 1;
         my %column-index = ();
         for (@header) -> $heading { %column-index{$heading} = $col-num++; }
@@ -74,7 +76,7 @@ class StaticTable {
             ci      => %column-index
         );
     }
-    multi method new(Position $columns!, +@new-data) {
+    multi method new(Position $columns!, +@new-data, :$filler = Nil) {
         my @header = ('A', 'B' ... *)[0 ... $columns - 1].list;
         self.new(@header, @new-data);
     }
@@ -83,7 +85,8 @@ class StaticTable {
     multi method new(@new-data,         #-- By default, @new-data is an array of arrays
         Bool :$set-of-hashes = False,   #-- Receiving an array with hashes in each element
         Bool :$data-has-header = False, #-- Asume an array of arrays. First row is the header
-        :$rejected-data is raw = Nil    #-- Rejected rows or cells will be returned here
+        :$rejected-data is raw = Nil,   #-- Rejected rows or cells will be returned here
+        :$filler = Nil
     ) {
         if ($set-of-hashes && $data-has-header) {
             X::Data::StaticTable.new("Contradictory flags using the 'rowset' constructor").throw;
@@ -113,7 +116,7 @@ class StaticTable {
             for (@hashable-data) -> $hash-ref {
                 my %row = %$hash-ref;
                 for (@header) -> $heading {
-                    push @data, (%row{$heading}.defined) ?? %row{$heading} !! Nil;
+                    push @data, (%row{$heading}.defined) ?? %row{$heading} !! $filler;
                 }
             }
             @$rejected-data = @xeno-hash if ($rejected-data.defined);
@@ -133,7 +136,7 @@ class StaticTable {
             for (@new-data[$first-data-row ... *]) -> $row-ref {
                 my @row = @$row-ref;
                 %xeno-array{$i} = @row.splice($columns) if (@row.elems > $columns);
-                push @row, |(Nil xx $columns - @row.elems) if @row.elems < $columns;
+                push @row, |($filler xx $columns - @row.elems) if @row.elems < $columns;
                 push @data, |@row;
                 $i++;
             }
@@ -274,6 +277,10 @@ class StaticTable {
     method take(Array[Position] $_rownums) {
         return self.new(@!header, self!gather-rowlist($_rownums));
     }
+
+    method clone() {
+        return self.new(@.header, @!data, filler => $!filler);
+    }
 }
 
 #------------------------------------------------------------------------------#
@@ -337,21 +344,35 @@ class StaticTable::Query {
     }
 }
 
+multi sub infix:<eqv>(StaticTable $t1, StaticTable $t2 --> Bool) {
+    return False if !($t1.header eqv $t2.header);
+    for ($t1.header.race) -> $heading {
+        return False if !($t1.column($heading) eqv $t2.column($heading));
+    }
+    return True;
+}
+
 =begin pod
 
 =head1 Introduction
 
-StaticTable allws you to handle bidimensional data in a more natural way
+A StaticTable allows you to handle bidimensional data in a more natural way
+
 Some features:
 
-=item Rows starts at 1 (C<Position> is the datatype used to reference row numbers)
+=over
+
+=item Rows starts at 1 (C<Data::StaticTable::Position> is the datatype used to reference row numbers)
 
 =item Columns have header names
 
 =item Any column can work as an index
 
+=back
+
 If the number of elements provided does not suffice to form a
-square or a rectangle, empty cells will be added.
+square or a rectangle, filler cells will be added as filler. (you can define
+what goes in these filler cells too)
 
 The module provides two classes: C<StaticTable> and C<StaticTable::Query>.
 
@@ -363,8 +384,6 @@ will be used.
 You can get data by rows, columns, and create subsets by taking some
 rows from an existing StaticTable.
 
-=back
-
 =head1 Types
 
 =head2 C<Data::StaticTable::Position>
@@ -372,21 +391,77 @@ rows from an existing StaticTable.
 Basically, an integer greater than 0. Used to indicate a row position
 in the table. A StaticTable do not have rows on index 0.
 
+=head1 Operators
+
+=head2 C<eqv>
+
+Compares the contents (header and data) of two StaticTable objects. Returns
+C<False> as soon as  any difference is detected, and C<True> if finds that
+everything is equal.
+
 =head1 C<Data::StaticTable> class
 
 =head2 Positional features
 
-You can use [n] to get the full Nth row, in the way of a hash of
-B<'Column name' => data>
+=head3 Brackets []
 
- $Q1[10]<Column3>
+You can use [n] to get the full Nth row, in the way of a hash of
+B<'Column name'> => data
+
+
+So, for example
+
+ $t[1]
+
+Could return a hash like
+
+ {Column1 => 10, Column2 => 200.4, Column3 => 450}
+
+And a call like
+
+ $t[10]<Column3>
 
 would refer to the data in Row 10, with the heading Column3
 
+=head3 the C<ci> hash
+
+On construction, a public hash called C<ci> (short for B<c>olumn B<i>ndex) is
+created. If for some reason, you need to refer the columns by number instead of
+name, this hash contains the column numbers as keys, and the heading name as
+values.
+
+if your column number B<2> has the name "Weight", you can read the cell in the
+third row of that column like this:
+
+ my $val1 = $t.cell('Weight', 3);
+ my $val2 = $t[3]<Weight>;
+
+Or by using the C<ci> hash
+
+ my $val1 = $t.cell($t.ci<2>, 3);
+ my $val2 = $t[3]{$t.ci<2>};
+
 =head2 C<method new>
 
- my $t = StaticTable.new( 3 , (1 .. 15) );
- my $t = StaticTable.new(
+Depending on how your data is ordered, you can use the 2 B<flat array>
+constructors or a B<rowset> constructor.
+
+B<Flat array> allows you to pass a long one dimensional array and order it in
+rows and columns, by specifiying a header. You can pass an array of string to
+specify the column names, or just a number of columns if you don't care about
+the column names.
+
+B<Rowset> works when your data is already bidimensional, and it can include a
+first row as header. In the case that your rows contains a hash, you can tell
+the constructor, and it will take the hash keys to create a header with the
+appropiate column names. In this case, any row that does not contain a hash
+will be discarded. But dont worry, you can always recover any discarded data
+later.
+
+=head3 The flat array constructor
+
+ my $t1 = StaticTable.new( 3 , (1 .. 15) );
+ my $t2 = StaticTable.new(
     <Column1 Column2 Column3> ,
     (
     1, 2, 3,
@@ -397,67 +472,150 @@ would refer to the data in Row 10, with the heading Column3
     )
  );
 
-Create a StaticTable, by specifying a header (one by one or just by numbers). If
-you use numbers, columns will be automatically named as A, B, C ... Z, AA, AB, ...
 
-This will create a spreadsheet-like table, with numbered rows and labelled
+This will create a spreadsheet-like table, with numbered rows and labeled
 columns.
 
-If you do not provide enough data to fill the last row, empty cels will be
+In the case of C<$t1>, since the first parameter is a number, it will have
+columns named automatically, as C<A>, C<B>, C<C>... etc.
+
+C<$t2> has an array as the first parameter. So it will have three columns
+labeled C<Column1>, C<Column2> and C<Column3>.
+
+You just need to provide an array to fill the table. The rows and columns will
+be automatically cut and filled in a number of rows.
+
+If you do not provide enough data to fill the last row, empty cells will be
 appended.
+
+If you already have your data ordered in an array of arrays, use the rowset
+constructor described below.
+
+=head3 The rowset constructor
 
 You can also create a StaticTable from an array, with each element representing
 a row. The StaticTable will acommodate the values as best as possible, adding
 empty values or discarding values that go beyond the boundaries, or data
 that is not prepared appropiately
 
-This constructor can be called like this
+This constructor can be called like this, using an Array of Arrays
 
  my $t = StaticTable.new(
     (1,2,3),
     (4,5,6),
     (7,8,9)
- )
+ );
 
- There is a set of named parameters usable in this constructor
+For a Array of Hashes, you can call it like this
+
+ my $t = StaticTable.new(
+ [
+  { name => 'Eggplant', color => 'aubergine', type => 'vegetal' },
+  { name => 'Egg', color => ('white', 'beige'), type => 'animal' },
+  { name => 'Banana', color => 'yellow', type => 'fruit' },
+  { name => 'Avocado', color => 'green', type => 'fruit',  class => 'Hass' }
+ ]
+ );
+
+I<(Note the use of brackets, we needed to explicitly pass an Array of Hashes)>
+
+There is a set of named parameters usable in this constructor
 
  my $t = StaticTable.new(@ArrayOfArrays):data-has-header
 
 This will use the first row as header. Any value that falls outside the column
-boudaries will be discarded.
+boundaries determined by the header will be discarded in each row.
 
  my $t = StaticTable.new(@ArrayOfHashes):set-of-hashes
 
 This will consider each row as a hash, and will create columns for each key
-found. The most populated will be at the first columns. Any row that is not a
+found. The most populated will be the first columns. Any row that is not a
 hash will be discarded
 
- my $t = StaticTable.new(
-   @ArrayOfArrays, rejected-data => %rejected
+=head3 Recovering discarded data
+
+In some situations, some data can be rejected from your original array passed to
+the constructor. This will happen
+in two cases, using the rowset constructor:
+
+=over 4
+
+=item You specified C<:data-has-header> but there are rows longer that the
+lenght of the header. So, if your first row had 4 elements, any row with more
+that 4 elements will be cut and the extra elements will be rejected
+
+=item You specified C<:set-of-hashes> but there are rows that does not contain
+hashes. All these rows will be rejected too.
+
+=back
+
+For recovering discarded data from an Array of Arrays:
+
+ my %rejected;
+ my $tAoA = StaticTable.new(
+   @ArrayOfArrays, rejected-data => %rejected # <--- Note, rejected is a hash
  ):data-has-header
 
- my $t = StaticTable.new(
-   @ArrayOfHashes, rejected-data => @rejected
+In this case, C<%rejected> is a hash where the key is the row from where the
+data was discarded, pointing to an array of the elements discarded in that row.
+
+For recovering discarded data from an Array of Hashes:
+
+ my @rejected;
+ my $tAoH = StaticTable.new(
+   @ArrayOfHashes, rejected-data => @rejected # <--- rejected is an array
  ):set-of-hashes
 
-In these cases, you can recover all the data that was discarded
+In this case, C<@rejected> will have a list of all the rejected rows.
 
+=head3 The C<filler> value
+
+There is another named parameter, called C<filler>. This is used to complete
+rows that needs more cells, so the table has every row with the same number of
+elements.
+
+By default, it uses C<Nil>.
+
+Example:
+ my $t = Data::StaticTable.new(
+   <A B C>,
+   (1,2,3,
+    4,5,6,
+    7),     # 2 last cells will be fillers, so the 3rd row is complete
+   filler => 'N/A'
+ );
+
+ print $t[3]<C>; #This will print N/A
 
 =head2 C<method perl>
 
-Shows a summary of the things contained in the Query object. Used for debugging,
-B<not for serialization>.
+Display the representation of the StaticTable. Can be used for serialization.
+
+=head2 C<method clone>
+
+Returns a newly created StaticTable with the same attributes. It does not copy
+attributes to clone. Instead, runs the constructor again.
 
 =head2 C<method display>
 
-Shows the contents of the StaticTable Used for debugging, B<not for
-serialization>.
+Shows a 'visual' representation of the contents of the StaticTable. Used for
+debugging, B<not for serialization>.
 
-=head2 C<method cell(Str $column-header, Position $row)>
+It would look like this:
+
+ A   B   C
+ ⋯  ⋯  ⋯
+ [1] [2] [3]
+ [4] [5] [6]
+ [7] [8] [9]
+
+However, you could save the output of this method to a tab-separated csv file.
+
+=head2 C<method cell(Str $column-heading, Position $row)>
 
 Retrieves the content of a cell.
 
-=head2 C<method column(Str $column-header)>
+=head2 C<method column(Str $column-heading)>
 
 Retrieves the content of a column like a regular C<List>.
 
@@ -520,7 +678,7 @@ Returns the values indexed.
 
 Returns the hash of the same indexes in the C<Query> object.
 
-=head2 C<method  grep(Str $heading, Mu $matcher where { -> Regex {}($_); True })>
+=head2 C<method grep(Str $heading, Mu $matcher where { -> Regex {}($_); True })>
 
 Allows to use grep over a column. It returns a list of row numbers where a
 regular expression matches.
