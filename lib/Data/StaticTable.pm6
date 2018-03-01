@@ -685,6 +685,13 @@ regular expression matches.
 
 You can not only use a regxep, but a C<Junction> or C<Regex> elements.
 
+=head2 C<method add-index($column-heading)>
+
+Creates a new index, and it will return a score indicating the index quality. Values of 1, or very close to zero are the less ideals.
+
+Neverthless, even an index with a score 1 will help.
+
+When an index is created, it is used automatically in any further grep calls.
 =end pod
 
 # vim: ft=perl6
