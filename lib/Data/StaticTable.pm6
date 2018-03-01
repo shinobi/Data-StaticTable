@@ -1,10 +1,8 @@
 use v6;
-use Test;
 use X::Data::StaticTable;
 unit module Data;
 
 subset StaticTable::Position of Int where * >= 1;
-
 
 class StaticTable {
     has Position $.columns;
@@ -399,6 +397,8 @@ Compares the contents (header and data) of two StaticTable objects. Returns
 C<False> as soon as  any difference is detected, and C<True> if finds that
 everything is equal.
 
+ say '$t1 and $t2 are ' ~ ($t1 eqv $t2) ?? 'equal' !! 'different';
+
 =head1 C<Data::StaticTable> class
 
 =head2 Positional features
@@ -443,7 +443,7 @@ Or by using the C<ci> hash
 
 =head2 C<method new>
 
-Depending on how your data is ordered, you can use the 2 B<flat array>
+Depending on how your source data is organized, you can use the 2 B<flat array>
 constructors or a B<rowset> constructor.
 
 B<Flat array> allows you to pass a long one dimensional array and order it in
@@ -455,8 +455,7 @@ B<Rowset> works when your data is already bidimensional, and it can include a
 first row as header. In the case that your rows contains a hash, you can tell
 the constructor, and it will take the hash keys to create a header with the
 appropiate column names. In this case, any row that does not contain a hash
-will be discarded. But dont worry, you can always recover any discarded data
-later.
+will be discarded (You have the option to recover the discarded data).
 
 =head3 The flat array constructor
 
@@ -577,6 +576,7 @@ elements.
 By default, it uses C<Nil>.
 
 Example:
+
  my $t = Data::StaticTable.new(
    <A B C>,
    (1,2,3,
