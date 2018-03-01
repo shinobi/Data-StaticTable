@@ -692,6 +692,7 @@ Creates a new index, and it will return a score indicating the index quality. Va
 Neverthless, even an index with a score 1 will help.
 
 When an index is created, it is used automatically in any further grep calls.
+
 =end pod
 
 # vim: ft=perl6
