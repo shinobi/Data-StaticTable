@@ -19,8 +19,7 @@ my $t1 = Data::StaticTable.new(
 diag $t1.display;
 
 diag "== Check indexes ==";
-my $q1  = Data::StaticTable::Query.new($t1);
-for ($t1.header) -> $h { $q1.add-index($h) }; #--- Generate all indexes
+my $q1  = Data::StaticTable::Query.new($t1, $t1.header);
 
 ok($q1<Dim4>.elems == 4, "Index of Dim4 has 4 elements");
 ok($q1<Dim1>:exists == True, "We can check if a column index has been generated");
@@ -32,35 +31,52 @@ ok($q1<Dim3><6> ~~ (2, 4), "We can check that the value 6 appears in column Dim3
 
 diag "== Searching without index ==";
 my $q2 = Data::StaticTable::Query.new($t1);
-ok($q2.grep("Dim3", rx/6/)                 ~~ (2, 4),    "Grep test returns rows 2,4");
-ok($q2.grep("Dim3", any(rx/9/, rx/6/))     ~~ (2, 3, 4), "Grep test returns rows 2,3,4" );
-ok($q2.grep("Dim2", one(rx/1/, rx/5/))     ~~ (1, 4),    "Grep test returns rows 1,4");
-ok($q2.grep("Dim2", any(rx/1/, rx/5/))     ~~ (1, 2, 4), "Grep test returns rows 1,2,4");
-ok($q2.grep("Dim2", all(rx/1/, rx/5/))     ~~ (2,),      "Grep test returns row 2");
-ok($q2.grep("Dim2", none(rx/1/, rx/5/))    ~~ (3, 5),    "Grep test returns rows 3,5");
-ok($q2.grep("Dim1", any(rx/ALPHA/, rx/0/)) ~~ (4, 5, 6), "Grep test returns rows 4,5,6");
+ok($q2.grep(rx/6/, "Dim3"):n                 ~~ (2, 4),    "Grep test returns rows 2,4");
+ok($q2.grep(any(rx/9/, rx/6/), "Dim3"):n     ~~ (2, 3, 4), "Grep test returns rows 2,3,4" );
+ok($q2.grep(one(rx/1/, rx/5/), "Dim2"):n     ~~ (1, 4),    "Grep test returns rows 1,4");
+ok($q2.grep(any(rx/1/, rx/5/), "Dim2"):n     ~~ (1, 2, 4), "Grep test returns rows 1,2,4");
+ok($q2.grep(all(rx/1/, rx/5/), "Dim2"):n     ~~ (2,),      "Grep test returns row 2");
+ok($q2.grep(none(rx/1/, rx/5/), "Dim2"):n    ~~ (3, 5),    "Grep test returns rows 3,5");
+ok($q2.grep(any(rx/ALPHA/, rx/0/), "Dim1"):n ~~ (4, 5, 6), "Grep test returns rows 4,5,6");
 
 ok(
-    $q1.grep("Dim2", any(rx/1/, rx/5/)) ~~ $q2.grep("Dim2", any(rx/1/, rx/5/)),
+    ($q1.grep(any(rx/1/, rx/5/), "Dim2"):n) ~~ ($q2.grep(any(rx/1/, rx/5/), "Dim2"):n),
     "Grep with index and without are equivalent (#1)"
 );
 
 ok(
-    $q1.grep("Dim2", all(rx/1/, rx/5/)) ~~ $q2.grep("Dim2", all(rx/1/, rx/5/)),
+    ($q1.grep(all(rx/1/, rx/5/), "Dim2"):n) ~~ ($q2.grep(all(rx/1/, rx/5/), "Dim2"):n),
     "Grep with index and without are equivalent (#2)"
 );
 
 ok(
-    $q1.grep("Dim2", none(rx/1/, rx/5/)) ~~ $q2.grep("Dim2", none(rx/1/, rx/5/)),
+    ($q1.grep(none(rx/1/, rx/5/), "Dim2"):n) ~~ ($q2.grep(none(rx/1/, rx/5/), "Dim2"):n),
     "Grep with index and without are equivalent (#3)"
 );
 
-diag "== Create a new table from grep results ==";
-my Data::StaticTable::Position @rows;
-@rows.append($q2.grep("Dim2", one(rx/1/, rx/5/)));
-@rows.append($q2.grep("Dim2", all(rx/1/, rx/5/)));
+diag "== Check different grep modes ==";
+my $rx = any(rx/ALPHA/, rx/0/);
+diag $q1.grep($rx, "Dim1"):n.perl;
+ok (($q1.grep($rx, "Dim1"):n) ~~ (4,5,6), "Expected rows");
 
-my $t2 = $t1.take(@rows);
+diag $q1.grep($rx, "Dim1"):r.perl;
+ok($q1.grep($rx, "Dim1"):r.elems == 3, "Expected 3 rows");
+
+diag $q1.grep($rx, "Dim1"):h.perl;
+ok($q1.grep($rx, "Dim1"):h.elems == 3, "Expected 3 rows");
+
+diag $q1.grep($rx, "Dim1"):nr.perl;
+ok (($q1.grep($rx, "Dim1"):nr.keys) ~~ (4,5,6), "Expected rows indexes");
+
+diag $q1.grep($rx, "Dim1"):nh.perl;
+ok (($q1.grep($rx, "Dim1"):nh.keys) ~~ (4,5,6), "Expected rows indexes");
+
+diag "== Create a new table from grep results of row numbers ==";
+my Data::StaticTable::Position @rownums;
+@rownums.append( $q2.grep(one(rx/1/, rx/5/), "Dim2"):n );
+@rownums.append( $q2.grep(all(rx/1/, rx/5/), "Dim2"):n );
+
+my $t2 = $t1.take(@rownums);
 #-- This should generate a StaticTable with rows 1, 4 and 2. IN THAT ORDER.
 diag $t2.display;
 
@@ -83,19 +99,5 @@ diag "== Serialization and EVAL test ==";
 my $q33 = EVAL $q31.perl;
 diag $q33.perl;
 ok($q31.perl eq $q33.perl, "Can be serialized using .perl method");
-
-diag "== More grep testing ==";
-my $t4 = Data::StaticTable.new(
-    <Countries  Import      Tons>,
-    (
-    'US PE CL', 'Copper',    100,
-    'US RU',    'Alcohol',   50,
-    'IL UK',    'Processor', 12,
-    'UK',       'Tuxedo',    1,
-    'JP CN',    'Tuna',      10
-    )
-);
-my $q4 = Data::StaticTable::Query.new($t4, $t4.header);
-
 
 done-testing;

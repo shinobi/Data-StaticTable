@@ -74,12 +74,12 @@ $TIME = now - $TIME;
 diag "== Index creation 'county' took : $TIME secs. ==";
 
 $TIME = now;
-  $q1.grep("county", /CLAY/);
+  $q1.grep(/CLAY/, "county"):n;
 $TIME = now - $TIME;
 diag "== Search with index (scored $score-county) took : $TIME secs. ==";
 
 $TIME = now;
-  $q2.grep("county", /CLAY/);
+  $q2.grep(/CLAY/, "county"):n;
 $TIME = now - $TIME;
 diag "== Search without index took : $TIME secs. ==";
 
@@ -88,18 +88,18 @@ $TIME = now;
 $TIME = now - $TIME;
 diag "== Index creation 'policyID' took : $TIME secs. ==";
 $TIME = now;
-  $q1.grep("policyID", /167630/);
+  $q1.grep(/167630/, "policyID"):n;
 $TIME = now - $TIME;
 diag "== Search with index (scored $score-policyID) took : $TIME secs. ==";
 $TIME = now;
-  $q2.grep("policyID", /167630/);
+  $q2.grep(/167630/, "policyID"):n;
 $TIME = now - $TIME;
 diag "== Search without index took : $TIME secs. ==";
 
 ok(
-    $q1.grep("policyID", /167630/)
+    ($q1.grep(/167630/, "policyID"):n)
     ~~
-    $q2.grep("policyID", /167630/),
+    ($q2.grep(/167630/, "policyID"):n),
     "Grep with index and without are equivalent"
 );
 
