@@ -343,8 +343,6 @@ class StaticTable::Query {
         }
     }
 
-    method where() { ... };
-
     #==== Index ====
     method add-index(Str $heading) {
         my %index;
