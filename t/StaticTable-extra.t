@@ -34,4 +34,17 @@ ok($t3[3]<C> eq 'N/A', 'Filler is correct');
 my $t3-clone = $t3.clone();
 ok($t3 eqv $t3-clone, "Cloning with filler works");
 
+diag "== 'take' using Int and Position types ==";
+my Data::StaticTable::Position @rowset13 = (1,3);
+my $t31 = $t3.take(@rowset13);
+my $t32 = $t3.take([1, 3]);
+my $t33 = $t3.take(1, 3);
+ok($t31 eqv $t32, "'take' works correcly using Ints or Position types #1");
+ok($t31 eqv $t33, "'take' works correcly using Ints or Position types #2");
+
+my Data::StaticTable::Position @rowset3 = (3);
+my $t34 = $t3.take(@rowset3);
+my $t35 = $t3.take(3);
+ok($t34 eqv $t35, "'take' works correcly using Ints or Position types (list of 1 element)");
+
 done-testing;

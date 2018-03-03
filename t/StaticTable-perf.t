@@ -1,5 +1,5 @@
 use v6;
-use Test; #plan 38;
+use Test;
 use Data::StaticTable;
 
 my Real $TIME;
@@ -64,8 +64,6 @@ for (1 .. $number-of-sets) -> $set {
 my Real $time-avg-row = (([+] @time-results-per-row)/$number-of-sets).round(0.00000001);
 diag "== Average : $time-avg-row secs. per row ==";
 
-#TODO: Test index and index speed for creation and search!
-
 diag "== Index speed ==";
 my $q1 = Data::StaticTable::Query.new($t2);
 my $q2 = Data::StaticTable::Query.new($t2);
@@ -74,7 +72,6 @@ $TIME = now;
   my $score-county = $q1.add-index("county").round(0.0001);
 $TIME = now - $TIME;
 diag "== Index creation 'county' took : $TIME secs. ==";
-diag $q1.perl;
 
 $TIME = now;
   $q1.grep("county", /CLAY/);

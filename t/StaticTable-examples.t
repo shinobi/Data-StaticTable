@@ -1,6 +1,6 @@
 use v6;
-use Data::StaticTable;
 use Test;
+use Data::StaticTable;
 
 ok(1==1, "Example code");
 
@@ -53,7 +53,6 @@ my Data::StaticTable::Position @r1 = $q3.grep("A", all(rx/n/, rx/e/)); # Rows 1 
 
 # Rows with a column C that has 'y'
 my Data::StaticTable::Position @r2 = $q3.grep('C', rx/y/); # Rows 3 and 5
-
 my $t4 = $t3.take(@r2); # Table $t4 is $t3 with rows 3 and 5 only
 say $t4.display;  # Display contents of $t4
 

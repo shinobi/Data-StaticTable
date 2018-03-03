@@ -106,10 +106,10 @@ class StaticTable {
                     push @xeno-hash, $row-ref if ($rejected-data.defined);
                 }
             }
-            @header = %column-frequency.sort({ -.value, .key }).map: (*.keys[0]);
             if (@hashable-data.elems == 0) {
                 X::Data::StaticTable.new("No data available").throw;
             }
+            @header = %column-frequency.sort({ -.value, .key }).map: (*.keys[0]);
             # Pass 2: Populate with data
             for (@hashable-data) -> $hash-ref {
                 my %row = %$hash-ref;
@@ -227,9 +227,7 @@ class StaticTable {
 
     #--- Returns raw data cells from a set of rows
     #--- Any repeated row is ignored (recovers only one)
-    method !gather-rowlist(Array[Position] $_rownums) {
-        my @rownums = gather for ($_rownums) -> $n { take $n };
-        @rownums = @rownums.unique.sort;
+    method !gather-rowlist(@rownums) {
         if (@rownums.elems == 0) {
             X::Data::StaticTable.new("No data available").throw;
         }
@@ -272,9 +270,10 @@ class StaticTable {
         return @result;
     }
 
-    method take(Array[Position] $_rownums) {
-        return self.new(@!header, self!gather-rowlist($_rownums));
+    multi method take(@rownums where .all ~~ Position) {
+         return self.new(@!header, self!gather-rowlist(@rownums));
     }
+    multi method take(*@rownums where .all ~~ Position) { return self.take(@rownums) }
 
     method clone() {
         return self.new(@.header, @!data, filler => $!filler);
@@ -286,23 +285,24 @@ class StaticTable {
 
 class StaticTable::Query {
     has %!indexes handles <keys elems values kv AT-KEY EXISTS-KEY>;
-    #-- Cache
-    has %!stored-rownumbers;
     has Data::StaticTable $!T;
     submethod BUILD (:$!T) { }
 
     method perl {
-        my Str $out;
-        return "No columns indexed." if (%!indexes.keys.elems == 0);
-        $out ~= %!indexes.keys.elems ~ " of " ~ $!T.columns ~ " columns indexed. Unique values per each:";
-        for ($!T.header) -> $heading {
-            if (%!indexes{$heading}:exists) {
-                my %one-index = %!indexes{$heading};
-                my Int $distinct-elements = %one-index.keys.elems;
-                $out ~= " '$heading'=$distinct-elements";
-            }
-        }
+        my @indexes = %!indexes.keys;
+        my $out = 'Data::StaticTable::Query.new(' ~ $!T.perl;
+        $out ~=  ", " ~ @indexes.perl if (@indexes.elems > 0);
+        $out ~= ")";
         return $out;
+    }
+
+    multi method new(Data::StaticTable $T, *@to-index) {
+        my $q = self.bless(T => $T);
+        return $q if (@to-index.elems == 0);
+        for (@to-index) -> $heading {
+            $q.add-index($heading);
+        }
+        return $q;
     }
 
     method grep(Str $heading, Mu $matcher where { -> Regex {}($_); True }) {
@@ -318,9 +318,6 @@ class StaticTable::Query {
         return @rownums.sort.list;
     }
 
-    method new(Data::StaticTable $T) {
-        self.bless(T => $T);
-    }
 
     #==== Index ====
     method add-index(Str $heading) {
@@ -589,7 +586,7 @@ Example:
 
 =head2 C<method perl>
 
-Display the representation of the StaticTable. Can be used for serialization.
+Returns a representation of the StaticTable. Can be used for serialization.
 
 =head2 C<method clone>
 
@@ -625,7 +622,7 @@ Retrieves the content of a row as a regular C<List>.
 
 =head2 C<method shaped-array()>
 
-Retrieves the content of a row as a multiple dimension array.
+Retrieves the content of the table as a multiple dimension array.
 
 =head2 C<method elems()>
 
@@ -633,13 +630,36 @@ Retrieves the number of cells in the table
 
 =head2 C<method generate-index(Str $heading)>
 
-Generate a C<Hash>, where the  key is the value of the cell, and the values
+Generate a C<Hash>, where the key is the value of the cell, and the value
 is a list of row numbers (of type C<Data::StaticTable::Position>).
 
-=head2 C<method take(Array[Position] $_rownums)>
+=head2 C<method take(@rownums where .all ~~ Position)>
 
 Generate a new C<StaticTable>, using a list of row numbers
 (using the type C<Data::StaticTable::Position>)
+
+The order of the rows will be kept, and you can consider repeated rows. You can
+use .uniq and .sort on the row numbers list. A sorted, unique list will make
+the construction of the new table B<faster>. Consider this is you want to use
+a lot of rownums.
+
+ #-- Order and repeated rows will be kept
+ my $new-t1 = $t.take(@list);
+ #-- Consider this if @list is big, not sorted and has repeated elements
+ my $new-t2 = $t.take(@list.uniq.sort)
+
+You can combine this with C<generate-index>
+
+ my %i-Status = $t.generate-index("Status");
+ # We want a new table with rows where Status = "Open"
+ my $t-open = $t.take(%i-Status<Open>);
+ # We want another where Status = "Awaiting feedback"
+ my $t-waiting = $t.take(%i-Status{'Awaiting feedback'});
+
+Also works with the C<grep> method from the C<StaticTable::Query> object. This
+allows to you do more complex searches in the columns.
+
+An identical, but slurpy version of this method is also available for convenience.
 
 =head1 C<Data::StaticTable::Query> class
 
@@ -657,14 +677,26 @@ You can use hash-like keys, to get a specific index for a column
 Both can get you the index (sames as generated by C<generate-index> in a
 C<StaticTable>).
 
-=head2 C<method new(Data::StaticTable $T)>
+=head2 C<method new(Data::StaticTable $T, *@to-index)>
 
-You need to specify an existing C<StaticTable> to create this object.
+You need to specify an existing C<StaticTable> to create this object. Optionally
+you can pass a list with all the column names you want to consider as indexes.
+
+Examples:
+
+ my $q1 = Data::StaticTable::Query.new($t);            #-- No index at construction
+ my $q2 = Data::StaticTable::Query.new($t, 'Address'); #-- Indexing column 'Address'
+ my $q3 = Data::StaticTable::Query.new($t, $t.header); #-- Indexing all columns
+
+If you don't pass any column names in the constructor, you can always use the
+method C<add-index> later
 
 =head2 C<method perl>
 
-Shows a summary of the data contained in the Query object. Used for debugging,
-B<not for serialization>.
+Returns a representation of the StaticTable::Query object. Can be used for
+serialization.
+
+B<Note:> This value will contain I<the complete> StaticTable for this index.
 
 =head2 C<method keys>
 
@@ -683,15 +715,31 @@ Returns the hash of the same indexes in the C<Query> object.
 Allows to use grep over a column. It returns a list of row numbers where a
 regular expression matches.
 
-You can not only use a regxep, but a C<Junction> or C<Regex> elements.
+You can not only use a regxep, but a C<Junction> of C<Regex> elements.
+
+Examples:
+
+ # Get the rownumbers where the column 'A' contains '9'
+ my Data::StaticTable::Position @rs1 = $q.grep("A", rx/9/);
+ # Get the rownumbers where the column 'A' contains 'n' and 'e'
+ my Data::StaticTable::Position @rs2 = $q.grep("A", all(rx/n/, rx/e/));
+
+You can use these results later with the method C<take>
 
 =head2 C<method add-index($column-heading)>
 
 Creates a new index, and it will return a score indicating the index quality. Values of 1, or very close to zero are the less ideals.
 
-Neverthless, even an index with a score 1 will help.
+Nevertheless, even an index with a score 1 will help.
 
-When an index is created, it is used automatically in any further grep calls.
+Example:
+
+ my $q1 = Data::StaticTable::Query.new($t); #-- Creates index and ...
+ $q1.add-index('Address');                  #-- indexes the column 'Address'
+
+
+When an index is created, it is used automatically in any further C<grep> calls.
+
 
 =end pod
 

@@ -1,5 +1,5 @@
 use v6;
-use Test; #plan 38;
+use Test;
 use Data::StaticTable;
 
 diag "== Testing indexes ==";
@@ -66,5 +66,36 @@ diag $t2.display;
 
 ok($t2.rows == 3, "Resulting StaticTable has 3 rows");
 ok($t2[3]{'Dim2'} == 51, "Right value found in Col Dim2, Row 3");
+
+diag "== Index creation at construction ==";
+my Data::StaticTable::Position @two-rows = (1, 2);
+my $t3 = $t1.take(@two-rows);
+my $q31 = Data::StaticTable::Query.new($t3, <Dim1 Dim2>);
+my $q32 = Data::StaticTable::Query.new($t3, 'Dim1', 'Dim2');
+ok($q31.kv.perl eqv $q32.kv.perl, "Equivalence using slurpy array for index spec on construction");
+
+throws-like
+{ my $ = Data::StaticTable::Query.new($t3, 'Dim1', 'DimXXXXX') },
+X::Data::StaticTable,
+"Construction fails when specifiying a heading that does not exist";
+
+diag "== Serialization and EVAL test ==";
+my $q33 = EVAL $q31.perl;
+diag $q33.perl;
+ok($q31.perl eq $q33.perl, "Can be serialized using .perl method");
+
+diag "== More grep testing ==";
+my $t4 = Data::StaticTable.new(
+    <Countries  Import      Tons>,
+    (
+    'US PE CL', 'Copper',    100,
+    'US RU',    'Alcohol',   50,
+    'IL UK',    'Processor', 12,
+    'UK',       'Tuxedo',    1,
+    'JP CN',    'Tuna',      10
+    )
+);
+my $q4 = Data::StaticTable::Query.new($t4, $t4.header);
+
 
 done-testing;

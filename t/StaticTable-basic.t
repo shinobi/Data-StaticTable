@@ -1,5 +1,5 @@
 use v6;
-use Test; #plan 38;
+use Test;
 use Data::StaticTable;
 
 #===============================================================================
@@ -163,9 +163,6 @@ ok($t10.rows == 6, "StaticTable has 6 rows");
 
 my %t10-row1 = (:Attr("attribute-1"), :Dim1(1), :Dim2(2), :Dim3(3), :Dim4("D+"));
 my %t10-row4 = (:Attr("attribute-4"), :Dim1($("ALPHA", "BETA", 3.0)), :Dim2(5), :Dim3(6), :Dim4("A++"));
-#-- By using  [] you can actually call row
-#Get the col pos of each attr key using [], compare to row
-#ok($t10[1] ~~ $t10.row(1), "[] and .row are equivalent");
 
 ok($t10[1] ~~ %t10-row1, "Reading rows by number returns the right hash for the row - row number 1");
 ok($t10[4] ~~ %t10-row4, "Reading rows by number returns the right hash for the row - row number 4, complex");
@@ -183,12 +180,11 @@ diag $t10-Dim2is5.display;
 ok($t10-Dim2is5.rows == 2, "Resulting table has 2 rows too");
 ok($t10-Dim2is5[2]<Dim1>[1] eq 'BETA', "Can read complex data inside a cell  - row number 2 of resulting table");
 
+diag "== Shaped array ==";
 my @shape = $t10.shaped-array();
 ok (@shape[3;1;0] eq 'ALPHA', "Shape spec works as expected (3 dimensions)");
 ok (@shape[3;1;1] eq 'BETA', "Shape spec works as expected (3 dimensions)");
 ok (@shape[3;1;2] == 3, "Shape spec works as expected (3 dimensions)");
 ok (@shape[1;2] == 5, "Shape spec works as expected (2 dimensions)");
-
-
 
 done-testing;

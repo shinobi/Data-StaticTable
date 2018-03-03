@@ -1,6 +1,6 @@
 use v6;
-use Data::StaticTable;
 use Test;
+use Data::StaticTable;
 
 diag "== Rowset constructor tests ==";
 
