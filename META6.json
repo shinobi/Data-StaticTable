@@ -9,7 +9,9 @@
   "license": "Artistic-2.0",
   "provides": {
     "StaticTable": "lib/Data/StaticTable.pm6",
-    "StaticTable::Query": "lib/Data/StaticTable.pm6"
+    "StaticTable::Position": "lib/Data/StaticTable.pm6",
+    "StaticTable::Query": "lib/Data/StaticTable.pm6",
+    "X::Data::StaticTable": "lib/X/Data/StaticTable.pm6"
   },
   "version": "0.1.0",
   "tags" : [ "data", "table", "bidimensional", "spreadsheet" , "static", "immutable", "cells", "rows", "columns"],
