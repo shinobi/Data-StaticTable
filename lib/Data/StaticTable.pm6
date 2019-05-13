@@ -365,8 +365,7 @@ class StaticTable::Query {
 
 multi sub infix:<eqv>(StaticTable $t1, StaticTable $t2 --> Bool) {
     return False if !($t1.header eqv $t2.header);
-    #for ($t1.header.race) -> $heading {
-    for ($t1.header) -> $heading {
+    for ($t1.header.race) -> $heading {
         return False if !($t1.column($heading) eqv $t2.column($heading));
     }
     return True;
